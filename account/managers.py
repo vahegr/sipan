@@ -1,34 +1,41 @@
 from django.contrib.auth.models import BaseUserManager
+from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, full_name, phone, password=None):
+    def create_user(self, national_code, password, **extra_fields):
         """
         Creates and saves a User with the given email and password.
         """
-        if not phone:
-            raise ValueError('لطفا ایمیل خود را وارد کنید!')
-        if not full_name:
-            raise ValueError('لطفا نام کاربری خود را انتخاب کنید')
+        if not national_code:
+            raise ValueError(_("National code must be set"))
+        if not national_code:
+            raise ValueError(_("Password code must be set"))
+        user = self.model(national_code=national_code, **extra_fields)
+        
+        user.set_password(password)
 
         user = self.model(
-            email=self.normalize_email(phone),
-            full_name=full_name
+            national_code=national_code,
+            **extra_fields
         )
 
         user.set_password(password)
-        user.save(using=self._db)
+        user.save()
         return user
 
-    def create_superuser(self, phone, full_name, password=None):
+    def create_superuser(self, national_code, password, **extra_fields):
         """
         Creates and saves a superuser with the given email and password.
         """
-        user = self.create_user(
-            phone=phone,
-            password=password,
-            full_name=full_name
-        )
-        user.is_admin = True
-        user.save(using=self._db)
-        return user
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError(_("Superuser must have is_staff=True."))
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError(_("Superuser must have is_superuser=True."))
+        
+        return self.create_user(national_code, password, **extra_fields)
+    

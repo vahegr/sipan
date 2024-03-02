@@ -41,7 +41,7 @@ INSTALLED_APPS = [
 
     # apps
     'account.apps.AccountConfig',
-    'management.apps.ManagementConfig',
+    'subscription.apps.SubscriptionConfig',
 
     # installed packages
     'rest_framework',
@@ -141,11 +141,11 @@ REST_FRAMEWORK = {
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 2
+    'PAGE_SIZE': 20
 }
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
 }
