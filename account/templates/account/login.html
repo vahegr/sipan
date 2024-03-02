@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+    Havana Cigar Shop | Log In To Your Account
+{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+{% block content %}
+  <body>
+
+    <!-- ***** Preloader Start ***** -->
+    <div id="preloader">
+        <div class="jumper">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>  
+    <!-- ***** Preloader End ***** -->
+
+    <!-- Header -->
+    <header class="">
+      <nav class="navbar navbar-expand-lg">
+        <div class="container">
+          <a class="navbar-brand" href="index.html"><h2>Sixteen <em>Clothing</em></h2></a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+              <li class="nav-item">
+                <a class="nav-link" href="index.html">Home
+                  <span class="sr-only">(current)</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="products.html">Our Products</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="about.html">About Us</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="contact.html">Contact Us</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link active" href="contact.html">Login/Register</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link-cart" href="#">
+                    <i class="fa fa-shopping-cart" aria-hidden="true"></i> 2
+                </a>
+              </li>
+
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-heading header-text">
+        <div class="send-message">
+            <div class="container">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="section-heading">
+                    <h2>Log In To Your Account</h2>
+                  </div>
+                </div>
+                <div class="col-md-12">
+                  <div class="contact-form">
+                    <form id="contact" method="post"> {% csrf_token %}
+                      <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12">
+                          
+                        </div>
+                        <div class="col-lg-12 col-md-12 col-sm-12">
+                          <fieldset>
+                            <i class="fa fa-user"></i>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                          </fieldset>
+                        </div>
+                        <div class="col-lg-12 col-md-12 col-sm-12">
+                          <fieldset>
+                            <i class="fa fa-lock"></i>
+                            {{ form.password }}
+                            {{ form.password.errors }}
+                          </fieldset>
+                        </div>
+                    
+                        <div class="col-lg-12">
+                          <fieldset>
+                            <button type="submit" id="form-submit" class="filled-button">Log In</button>
+                          </fieldset>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+            
+              </div>
+            </div>
+          </div>
+    </div>
+
+
+  </body>
+{% endblock %}
+</html>
