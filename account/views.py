@@ -9,6 +9,16 @@ from .serializers import UserSerializer
 from .models import User
 
 
+class UsersViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def get_permissions(self):
+        if self.action in ('update', 'create', 'destroy', 'partial_update'):
+            self.permission_classes = [IsAdminUser, ]
+        return super(UsersViewSet, self).get_permissions()
+
+
 # class Register(GenericAPIView):
 #     serializer_class = RegisterSerializer
 #
