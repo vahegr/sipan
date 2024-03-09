@@ -1,16 +1,14 @@
 from rest_framework import serializers
 from .models import User
-from django.utils import timezone
-
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'full_name',
-            'phone', 'years', 'field')
+            'id', 'national_code', 'first_name', 'last_name',
+            'phone')
 
-
+    
 # class RegisterSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = User
