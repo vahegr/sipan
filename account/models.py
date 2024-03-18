@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractBaseUser
 
 
 class User(AbstractBaseUser):
+    image = models.ImageField(upload_to='users/images', null=True)
     first_name = models.CharField(
         max_length=32,
     )
@@ -47,7 +48,7 @@ class User(AbstractBaseUser):
     
     @property
     def full_name(self):
-        return self.first_name + " " + self.last_name
+        return f'{self.first_name} {self.last_name}'
     
     def has_module_perms(self, app_label):
         "Does the user have permissions to view the app `app_label`?"
