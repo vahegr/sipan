@@ -1,14 +1,16 @@
 from rest_framework import serializers
 from .models import User
+from subscription.models import Subscription, SubSection
+
 
 class UserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = (
             'id', 'national_code', 'first_name', 'last_name',
-            'phone')
+            'phone', 'image')
 
-    
 # class RegisterSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = User

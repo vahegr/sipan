@@ -31,7 +31,6 @@ class User(AbstractBaseUser):
         default=False,
     )
     
-
     objects = UserManager()
 
     USERNAME_FIELD = 'national_code'
