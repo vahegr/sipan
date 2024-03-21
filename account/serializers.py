@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User
-from subscription.models import Subscription, SubSection
+from subscription.models import Subscription, Section
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'national_code', 'first_name', 'last_name',
             'phone', 'image')
-
+        
 # class RegisterSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = User

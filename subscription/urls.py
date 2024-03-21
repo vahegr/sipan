@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from .views import UserSubsViewSet, SubSectionViewSet
+from .views import UserSubsViewSet, SectionViewSet
 
 app_name = 'subscription'
 

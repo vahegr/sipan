@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from sipan.settings import BASE_DIR
 
 from account.views import UsersViewSet
-from subscription.views import UserSubsViewSet, SubSectionViewSet
+from subscription.views import UserSubsViewSet, SectionViewSet
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -16,7 +16,7 @@ from rest_framework_simplejwt.views import (
 router = DefaultRouter()
 router.register(r'users', UsersViewSet, basename='users')
 router.register(r'subs', UserSubsViewSet, basename='subs')
-router.register(r'subsec', SubSectionViewSet, basename='subsec')
+router.register(r'sections', SectionViewSet, basename='sections')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
