@@ -1,24 +1,37 @@
+import os
+
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status, serializers
+from rest_framework.decorators import action
 
 from account.models import User
+from sipan.card_generator import generate_card
 
 from .serializer import SectionSubscriptionSerializer, SubscriptionSerializer, SectionSerializer, SectionYearSerializer
 from .models import Subscription, Section, SectionYear
+from sipan.settings import BASE_DIR
 
 
 class UserSubsViewSet(ModelViewSet):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
-
+    
     def retrieve(self, request, pk=None):
         data = get_object_or_404(self.queryset, pk=pk)
         serializer = self.serializer_class(data, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def card(self, request, pk):
+        sub = get_object_or_404(self.queryset, pk=pk)
+        img_bytes = generate_card(sub.user.full_name, '', f"{sub.year.section.name} {sub.year.year}", sub.user.national_code, sub.user.id)
+        return HttpResponse(img_bytes, content_type="image/jpeg")
+
 
     def create(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -41,6 +54,8 @@ class SectionYearView(ModelViewSet):
             return Response(serializer.data)
         else:
             return super().list(request, args, kwargs)
+
+
 
 class SectionViewSet(ModelViewSet):
     queryset = Section.objects.all()

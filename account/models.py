@@ -1,10 +1,21 @@
+import uuid
+import os
+
 from django.db import models
-from .managers import UserManager
 from django.contrib.auth.models import AbstractBaseUser
+
+from .managers import UserManager
+
+
+def get_file_path(instance, filename):
+    print(type(instance))
+    ext = filename.split('.')[-1]
+    filename = f"{instance.id}-{instance.national_code}-{uuid.uuid4()}.{ext}"
+    return os.path.join('users/images', filename)
 
 
 class User(AbstractBaseUser):
-    image = models.ImageField(upload_to='users/images', null=True)
+    image = models.ImageField(upload_to=get_file_path, null=True)
     first_name = models.CharField(
         max_length=32,
     )

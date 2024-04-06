@@ -36,10 +36,3 @@ class UsersViewSet(ModelViewSet):
                 filter_keyword_arguments_dict["national_code__icontains"] = value
         queryset = User.objects.filter(**filter_keyword_arguments_dict)
         return queryset
-
-    def get_permissions(self):
-        print(self.action)
-        if self.action in ('update', 'create', 'destroy', 'partial_update'):
-            self.permission_classes = [AllowAny, ]
-        return super(UsersViewSet, self).get_permissions()
-

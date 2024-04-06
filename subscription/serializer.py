@@ -18,7 +18,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         if 'national_code' in data:
             if len(data['national_code']) == 10:
                 new_data['user'] = get_object_or_404(User, national_code=data['national_code']).id
-                
+
             del new_data['national_code']
         if 'section' in data and 'year' in data:
             section_year = get_object_or_404(SectionYear, section=int(data['section']), year=int(data['year']))
@@ -28,7 +28,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(new_data)
 
-    
+
 class SectionSubscriptionSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
 
@@ -48,6 +48,7 @@ class SectionSerializer(serializers.ModelSerializer):
 
 class SectionYearSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField()
+
     class Meta:
         model = SectionYear
         fields = ('id', 'section', 'year', 'price', 'count')
