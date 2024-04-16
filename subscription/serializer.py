@@ -37,13 +37,14 @@ class SectionSubscriptionSerializer(serializers.ModelSerializer):
         fields = ('id', 'year', 'user')
 
     def get_user(self, obj):
-        return UserSerializer(obj.user).data
+        # print(UserSerializer(obj.user).)
+        return UserSerializer(obj.user, context={'request': self.context.get('request')}).data
 
 
 class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'color')
 
 
 class SectionYearSerializer(serializers.ModelSerializer):

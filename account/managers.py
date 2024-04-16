@@ -3,28 +3,24 @@ from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, national_code, password, **extra_fields):
-        """
-        Creates and saves a User with the given email and password.
-        """
-        if not national_code:
-            raise ValueError(_("National code must be set"))
-        if not national_code:
+    def create_user(self, username, password, **extra_fields):
+        if not username:
+            raise ValueError(_("Username must be set"))
+        if not username:
             raise ValueError(_("Password code must be set"))
-        user = self.model(national_code=national_code, **extra_fields)
+        user = self.model(username=username, **extra_fields)
         
         user.set_password(password)
 
         user = self.model(
-            national_code=national_code,
+            username=username,
             **extra_fields
         )
-
         user.set_password(password)
         user.save()
         return user
 
-    def create_superuser(self, national_code, password, **extra_fields):
+    def create_superuser(self, username, password, **extra_fields):
         """
         Creates and saves a superuser with the given email and password.
         """
@@ -37,5 +33,5 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError(_("Superuser must have is_superuser=True."))
         
-        return self.create_user(national_code, password, **extra_fields)
+        return self.create_user(username, password, **extra_fields)
     

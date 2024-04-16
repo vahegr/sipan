@@ -1,16 +1,24 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework.response import Response
+
 from .models import User
 from subscription.models import Subscription, Section
 
 
 class UserSerializer(serializers.ModelSerializer):
-
+    subs = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = (
-            'id', 'national_code', 'first_name', 'last_name',
-            'phone', 'image')
-        
+            'id', 'username', 'national_code', 'first_name', 'last_name', 'first_name_fa', 'last_name_fa', 'email', 'address', 'phone', 'subs', 'image')
+
+
+    def get_subs(self, obj):
+        user = get_object_or_404(User, pk=obj.pk)
+        user_sections = Subscription.objects.filter(user=user).values_list("year__year", "year__section__name")
+        user_section_subs = [f"{u[1]} {u[0]}" for u in user_sections]
+        return user_section_subs
 # class RegisterSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = User

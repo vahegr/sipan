@@ -3,8 +3,10 @@ import os
 
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
+from django.core.validators import validate_email
 
 from .managers import UserManager
+
 
 
 def get_file_path(instance, filename):
@@ -22,12 +24,46 @@ class User(AbstractBaseUser):
     last_name = models.CharField(
         max_length=64,
     )
-    national_code = models.CharField(
-        max_length=10,
+    first_name_fa = models.CharField(
+        max_length=32,
+        blank=True,
+        default=''
+    )
+    last_name_fa = models.CharField(
+        max_length=64,
+        blank=True,
+        default=''
+    )
+    username = models.CharField(
+        max_length=16,
         unique=True
     )
+    national_code = models.CharField(
+        max_length=10,
+        unique=True,
+        blank=True,
+        default=''
+    )
     phone = models.CharField(
-        max_length=20,
+        max_length=11,
+        blank=True,
+        default=''
+    )
+    email = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        validators=[validate_email]
+    )
+    address = models.CharField(
+        max_length=256,
+        blank=True,
+        default=''
+    )
+    home = models.CharField(
+        max_length=8,
+        blank=True,
+        default=''
     )
     manager = models.BooleanField(
         default=False,
@@ -41,11 +77,12 @@ class User(AbstractBaseUser):
     is_superuser = models.BooleanField(
         default=False,
     )
-    
+    date_created = models.DateTimeField(auto_now_add=True)
+
     objects = UserManager()
 
-    USERNAME_FIELD = 'national_code'
-    REQUIRED_FIELDS = ['first_name', 'last_name' ]
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
 
 
     class Meta:
@@ -53,18 +90,18 @@ class User(AbstractBaseUser):
         verbose_name_plural = 'users'
 
     def has_perm(self, perm, obj=None):
-        "Does the user have a specific permission?"
         return True
-    
+
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'
+    @property
+    def full_name_fa(self):
+        return f'{self.first_name_fa} {self.last_name_fa}'
     
     def has_module_perms(self, app_label):
-        "Does the user have permissions to view the app `app_label`?"
         return True
-    
-    def __str__(self):
-        return self.national_code
 
+    def __str__(self):
+        return f"< {self.id} {self.username} {self.national_code} >"
 

@@ -30,3 +30,4 @@ urlpatterns = [
 ] 
 
 urlpatterns += static('users/images/', document_root=BASE_DIR / 'users' / 'images')
+# urlpatterns += static('/', document_root=BASE_DIR / 'front')

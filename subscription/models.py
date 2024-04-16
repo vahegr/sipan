@@ -1,12 +1,23 @@
+import re
+
 from django.db import models
 from account.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+
+
+def validate_hex_color(value):
+    regex = r'^#[0-9a-fA-F]{6}$'
+    if not re.match(regex, value):
+        raise ValidationError('Invalid hex color format')
 
 
 class Section(models.Model):
     name = models.CharField(max_length=32, unique=True)
+    color = models.CharField(max_length=7, validators=[validate_hex_color], default="#000000")
+
     def __str__(self):
-        return f"<Section #{self.id} {self.name}>"
+        return f"<Section #{self.id} {self.name} {self.color}>"
 
 
 class SectionYear(models.Model):
@@ -20,9 +31,11 @@ class SectionYear(models.Model):
     def __str__(self):
         return f"<SectionYear #{self.id} {self.section.name} -  {self.price} - {self.year}>"
 
+
 class Subscription(models.Model):
     user = models.ForeignKey(User, related_name='user_subs', on_delete=models.CASCADE)
     year = models.ForeignKey(SectionYear, related_name='sub_year', on_delete=models.CASCADE)
+    date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('year', 'user')

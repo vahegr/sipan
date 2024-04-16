@@ -1,15 +1,15 @@
-from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework.viewsets import ViewSet, ModelViewSet
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly, AllowAny
-from rest_framework.authentication import SessionAuthentication
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
+
+from rest_framework.viewsets import ModelViewSet
 from rest_framework import fields, serializers
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-
+from subscription.serializer import SectionSerializer
 from .serializers import UserSerializer
 from .models import User
+from subscription.models import Subscription
 
 
 class ValidateQueryParams(serializers.Serializer):
@@ -18,21 +18,27 @@ class ValidateQueryParams(serializers.Serializer):
         required=False
     )
 
+
 class UsersViewSet(ModelViewSet):
     # queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        """
-        Searches the database in relation to the query sent by the user.
-        :return: Django queryset object containing search results.
-        """
-        query_params = ValidateQueryParams(data=self.request.query_params)
-        query_params.is_valid(raise_exception=True)
+        # query_params = ValidateQueryParams(data=self.request.query_params)
+        # query_params.is_valid(raise_exception=True)
         query_dict = {k: v for k, v in self.request.query_params.items() if v}
-        filter_keyword_arguments_dict = {}
-        for key, value in query_dict.items():
-            if key == "search":
-                filter_keyword_arguments_dict["national_code__icontains"] = value
-        queryset = User.objects.filter(**filter_keyword_arguments_dict)
+
+        queryset = User.objects.filter(Q(is_superuser=False) | Q(is_staff=False))
+
+        search_val = query_dict.get('search')
+        if search_val:
+            queryset = User.objects.filter(Q(national_code__icontains=search_val) | Q(first_name__icontains=search_val) | Q(last_name__icontains=search_val))
         return queryset
+
+    @action(detail=True, methods=['get'])
+    def subscriptions(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        user_sections = Subscription.objects.filter(user=user).values_list("year__year", "year__section__name")
+        user_section_subs = [f"{u[1]} {u[0]}" for u in user_sections]
+        return Response(user_section_subs)
+    
