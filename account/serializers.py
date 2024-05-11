@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'national_code', 'first_name', 'last_name', 'first_name_fa', 'last_name_fa', 'email', 'address', 'phone', 'subs', 'image')
+            'id', 'username', 'national_code', 'first_name', 'last_name', 'first_name_fa', 'last_name_fa', 'email', 'address', 'phone', 'home', 'subs', 'image')
 
 
     def get_subs(self, obj):

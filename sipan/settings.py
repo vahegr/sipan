@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from datetime import timedelta
 from os import path
 from pathlib import Path
+import os
+from django.conf.urls.static import static
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-nti45bb^&mtqi&k&!v##3l$*x&4wrlsv17a6zz_a2m)$%en@4g'
-
+SECRET_KEY = os.environ.get('DJANGO_SECRET')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True if os.environ.get('ENV') == "development" else False
 
-ALLOWED_HOSTS = []
+if not DEBUG:
+    ALLOWED_HOSTS = ['.sipan-org.org']
 
 
 # Application definition
@@ -66,8 +68,7 @@ ROOT_URLCONF = 'sipan.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates']
-        ,
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -88,8 +89,12 @@ WSGI_APPLICATION = 'sipan.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASS'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': '3306',
     }
 }
 
@@ -129,6 +134,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
+
+STATICFILES_DIRS = [
+    path.join(BASE_DIR, 'assets'),
+]
+
+MEDIA_ROOT = path.join(BASE_DIR, 'media')
+STATIC_ROOT = path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -142,7 +155,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10
@@ -150,12 +163,14 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=3),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:8888",
+    "https://panel.sipan-org.org",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += ["http://localhost:8888", "http://127.0.0.1:8888"]
+    

@@ -10,10 +10,10 @@ from .managers import UserManager
 
 
 def get_file_path(instance, filename):
-    print(type(instance))
+    
     ext = filename.split('.')[-1]
     filename = f"{instance.id}-{instance.national_code}-{uuid.uuid4()}.{ext}"
-    return os.path.join('users/images', filename)
+    return os.path.join('user-images', filename)
 
 
 class User(AbstractBaseUser):
@@ -104,4 +104,3 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return f"< {self.id} {self.username} {self.national_code} >"
-

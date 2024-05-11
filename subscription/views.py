@@ -10,7 +10,7 @@ from rest_framework import status, serializers, mixins
 from rest_framework.decorators import action
 
 from account.models import User
-from sipan.card_generator import generate_card
+from sipan.card_generator import generate_card, generate_page
 
 from .serializer import SectionSubscriptionSerializer, SubscriptionSerializer, SectionSerializer, SectionYearSerializer
 from .models import Subscription, Section, SectionYear
@@ -34,12 +34,13 @@ class UserSubsViewSet(mixins.CreateModelMixin,
     @action(detail=True, methods=['get'])
     def card(self, request, pk):
         sub = get_object_or_404(self.queryset, pk=pk)
-        if sub.user.image:
-            image_path = sub.user.image.path
-        else:
-            image_path = ""
-        img_bytes = generate_card(image_path, sub.user.full_name, '', f"{sub.year.section.name} {sub.year.year}", sub.year.section.color, sub.user.national_code, sub.user.id)
+        img_bytes = generate_card(sub)
         return HttpResponse(img_bytes, content_type="image/jpeg")
+
+    @action(detail=False, methods=['post'])
+    def cards(self, request):
+        pdf_bytes = generate_page(list(request.data['subs']))
+        return HttpResponse(pdf_bytes, content_type="application/pdf")
 
     def create(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -76,11 +77,8 @@ class SectionViewSet(mixins.CreateModelMixin,
                      GenericViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = None
 
-    def list(self, request):
-        serializer = self.serializer_class(self.queryset, many=True)
-        return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
         section_obj = get_object_or_404(self.queryset, pk=pk)
@@ -94,18 +92,26 @@ class SectionViewSet(mixins.CreateModelMixin,
 
             subscriptions = Subscription.objects.filter(
                 year=year_obj.pk).order_by('-id').all()
-            paginator = self.pagination_class()
+            paginator = PageNumberPagination()
+
             page = paginator.paginate_queryset(subscriptions, request)
 
             subscriptions_serializer = SectionSubscriptionSerializer(
                 page, many=True, context={'request': request})
+            
+            result = []
+            for d in subscriptions_serializer.data:
+                temp_dict = {k: v for k, v in d.items() if k not in ['section', 'year']}
+                temp_dict.update({'year': year})
+                temp_dict.update({'sectionName': section_obj.name})
+                result.append(temp_dict)
 
             return Response({
                 **serializer.data,
                 "count": len(subscriptions),
                 "next": paginator.get_next_link(),
                 "previous": paginator.get_previous_link(),
-                "results": [{k: v for k, v in d.items() if k not in ['section', 'year']} | {'year': year} for d in subscriptions_serializer.data]
+                "results": result
             })
         else:
             section_years = SectionYear.objects.filter(

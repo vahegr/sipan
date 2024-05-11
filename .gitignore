@@ -48,5 +48,5 @@ cleanup.ps1
 .idea
 utils/
 users/images/*
-
+*.ps1
 .vscode

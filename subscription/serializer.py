@@ -54,6 +54,11 @@ class SectionYearSerializer(serializers.ModelSerializer):
         model = SectionYear
         fields = ('id', 'section', 'year', 'price', 'count')
 
+    def update(self, instance, validated_data):
+        validated_data.pop('section', None)
+        validated_data.pop('year', None)
+        return super().update(instance, validated_data)
+
     def get_count(self, obj):
         subscriptions = Subscription.objects.filter(year=obj.pk)
         return subscriptions.count()

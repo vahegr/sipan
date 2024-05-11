@@ -1,15 +1,25 @@
 import io
 import os
-from math import floor
+import platform
 
-from PIL import Image, ImageDraw, ImageFont
+from math import floor, ceil
+
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from arabic_reshaper import reshape 
 from bidi.algorithm import get_display
+
 from sipan.settings import BASE_DIR
+from django.shortcuts import get_object_or_404
+from subscription.models import Subscription
 
 dpi = 300
 width = floor(8.5 * dpi / 2.54)
-height = floor(6 * dpi / 2.54)
+height = floor(5.4 * dpi / 2.54)
+
+dash = 6
+dash_whitespace = 5
+dash_color = 'black'
+dash_width = 1
 
 
 def cm_to_px(x):
@@ -35,9 +45,10 @@ def get_font(text, font_name, initial_size, max_len):
     return font
 
 
-def scale_to_fit_box(image_path, box_width, box_height):
+def prepare_profile_image(image_path, box_width, box_height):
     profile_holder = Image.new("RGB", (box_width, box_height), (255, 255, 255))
     image = Image.open(image_path)
+    image = ImageOps.exif_transpose(image)
     image_width, image_height = image.size
 
     scale_factor = box_height/image_height
@@ -48,49 +59,107 @@ def scale_to_fit_box(image_path, box_width, box_height):
     profile_holder.paste(resized_image, ((profile_holder.width - new_width)//2, (profile_holder.height - new_height)//2) )
     return profile_holder
 
+def generate_page(section_ids):
+    if len(section_ids) > 100 or len(section_ids) == 0:
+        return b''
+    page_w = cm_to_px(21)
+    page_h = cm_to_px(29.7)
+    margin_x_page = cm_to_px(1)
+    margin_y_page = cm_to_px(1)
+    margin_x = cm_to_px(0.5)
+    margin_y = cm_to_px(0.5)
+    col_count = (page_w+margin_x-2*margin_x_page) // (width + margin_x)
+    row_count = (page_h+margin_y-2*margin_y_page) // (height + margin_y)
+    count = col_count * row_count
+    pages_count = ceil(len(section_ids) / count)
+    pages = []
+    card_count = len(section_ids)
+    for _ in range(pages_count):
+        pages.append(Image.new('RGB', (page_w, page_h), (255, 255, 255)))
 
-def generate_card(image_path, fullname_am, fullname_fa, section_text, section_color, national_code, user_id):
+    for n in range(card_count):
+        col = n % col_count
+        row = (n // col_count) % row_count
+        page_n = n // count
+
+        sub = Subscription.objects.get(pk=section_ids[n])
+        if sub is not None:
+            card_image = generate_card_image(sub)
+            pages[page_n].paste(card_image, (margin_x_page+col*(width+margin_x), margin_y_page+row*(height+margin_y)))
+        else:
+            print("not found")
+    pdf_bytes = io.BytesIO()
+    pages[0].save(pdf_bytes, format='PDF', save_all=True, append_images=pages[1:])
+    pdf_bytes.name = "cards.pdf"
+    return pdf_bytes.getvalue()
+
+def generate_card(sub):
+    img_byte_arr = io.BytesIO()
+    image = generate_card_image(sub)
+    image.save(img_byte_arr, format='JPEG')
+    return img_byte_arr.getvalue()
+
+
+def generate_card_image(sub):
+    if sub.user.image:
+        image_path = sub.user.image.path
+    else:
+        image_path = ""
+    fullname_am, fullname_fa, section_text, section_color, national_code, user_id = sub.user.full_name, sub.user.first_name_fa + ' ' + sub.user.last_name_fa, f"{sub.year.section.name} {sub.year.year}", sub.year.section.color, sub.user.national_code, sub.user.id
+
+    isWindows = platform.system() == "Windows"
     logo_path = os.path.join(BASE_DIR, 'assets', 'logo.png')
     logo_image = Image.open(logo_path).convert('RGB')
     logo_size = (cm_to_px(2), cm_to_px(2))
 
     card = Image.new("RGB", (width, height), (255, 255, 255))
     if os.path.exists(image_path):
-        profile_holder = scale_to_fit_box(image_path, cm_to_px(2.3), cm_to_px(3.5))
+        profile_holder = prepare_profile_image(image_path, cm_to_px(2.3), cm_to_px(3))
     else:
-        profile_holder = Image.new("RGB", (cm_to_px(2.3), cm_to_px(3.5)), (255, 255, 255))
+        profile_holder = Image.new("RGB", (cm_to_px(2.3), cm_to_px(3)), (255, 255, 255))
 
     section_font_size = cm_to_px(0.5)
     font_size = cm_to_px(0.3)
-    font = ImageFont.truetype("arial.ttf", font_size)
-    section_font = ImageFont.truetype("arial.ttf", section_font_size)
-    
+    font = ImageFont.truetype(os.path.join(BASE_DIR, 'assets', 'arial.ttf'), font_size)
+    section_font = ImageFont.truetype(os.path.join(BASE_DIR, 'assets', 'arial.ttf'), section_font_size)
+
     draw = ImageDraw.Draw(card)
 
     # logo and name
     draw.rectangle(((cm_to_px(5.2), cm_to_px(1.2)), (width, cm_to_px(1.4))), fill="black")
-    text_fa = get_display(reshape("انجمن فرهنگی ورزشی\nارامنــه سیــپــان"))
+    text_logo_fa = "انجمن فرهنگی ورزشی\nارامنــه سیــپــان"
+    text_fa = get_display(reshape(text_logo_fa)) if isWindows else reshape(text_logo_fa)
     draw.text((cm_to_px(5.3), cm_to_px(0.5)), "ՀԱՅ ՄՇԱԿՈՒԹԱՅԻՆ\n«ՍԻՓԱՆ» ՄԻՈՒԹԻՒՆ", font=font,  fill=(0, 0, 0))
     draw.text((cm_to_px(5.3), cm_to_px(1.5)), text_fa, font=font,  fill=(0, 0, 0))
     card.paste(logo_image.resize(logo_size, Image.LANCZOS), (cm_to_px(3), cm_to_px(0.4)))
 
     # Section
-    draw.rectangle(((0, cm_to_px(5)), (width, height)), fill=section_color)
-    draw.text(center_pos(width/2, cm_to_px(5.41), section_text, section_font), section_text, font=section_font,  fill=(255,255,255))
+    draw.rectangle(((0, cm_to_px(4.4)), (width, height)), fill=section_color)
+    draw.text(center_pos(width/2, cm_to_px(4.81), section_text, section_font), section_text, font=section_font,  fill=(255,255,255))
 
     # profile and texts
     card.paste(profile_holder, (cm_to_px(0.4), cm_to_px(0.4)))
-    draw.text(center_pos(cm_to_px(1.5), cm_to_px(4.7), str(national_code), font), str(national_code), font=font,  fill=(0, 0, 0))
-    draw.text(center_pos(cm_to_px(1.5), cm_to_px(4.2), str(user_id), font), str(user_id), font=font,  fill=(0, 0, 0))
+    draw.text(center_pos(cm_to_px(1.5), cm_to_px(4.1), str(national_code), font), str(national_code), font=font,  fill=(0, 0, 0))
+    draw.text(center_pos(cm_to_px(1.5), cm_to_px(3.7), str(user_id), font), str(user_id), font=font,  fill=(0, 0, 0))
 
     # name
-    text_fa = get_display(reshape(fullname_fa))
+    text_fa = get_display(reshape(fullname_fa)) if isWindows else reshape(fullname_fa)
     name_font_size = cm_to_px(0.4)
-    name_font_size1 = get_font(text_fa, "tahoma.ttf", name_font_size, cm_to_px(4))
-    name_font_size2 = get_font(fullname_am, "tahoma.ttf", name_font_size, cm_to_px(4))
-    draw.text(center_pos(cm_to_px(5.5), cm_to_px(3.5), fullname_am, name_font_size2), fullname_am, font=name_font_size2,  fill=(0, 0, 0))
-    draw.text(center_pos(cm_to_px(5.5), cm_to_px(4), text_fa, name_font_size1), text_fa, font=name_font_size1,  fill=(0, 0, 0))
+    name_font_size1 = get_font(text_fa, os.path.join(BASE_DIR, 'assets', 'arial.ttf'), name_font_size, cm_to_px(4))
+    name_font_size2 = get_font(fullname_am, os.path.join(BASE_DIR, 'assets', 'arial.ttf'), name_font_size, cm_to_px(4))
+    draw.text(center_pos(cm_to_px(5.5), cm_to_px(3.2), fullname_am, name_font_size2), fullname_am, font=name_font_size2,  fill=(0, 0, 0))
+    draw.text(center_pos(cm_to_px(5.5), cm_to_px(3.7), text_fa, name_font_size1), text_fa, font=name_font_size1,  fill=(0, 0, 0))
 
-    img_byte_arr = io.BytesIO()
-    card.save(img_byte_arr, format='JPEG')
-    return img_byte_arr.getvalue()
+    # dashed line around box
+    dashed_card = Image.new("RGB", (width+dash_width*2, height+dash_width*2), (255, 255, 255))
+    dashed_draw = ImageDraw.Draw(dashed_card)
+    dashed_card.paste(card, (1, 1))
+    for i in range(width//(dash+dash_whitespace)+4):
+        dashed_draw.line(((i-1)*(dash+dash_whitespace), 0, min(i*dash+(i-1)*dash_whitespace, width), 0), width=dash_width, fill=dash_color)
+        dashed_draw.line(((i-1)*(dash+dash_whitespace), height+dash_width, min(i*dash+(i-1)*dash_whitespace, width), height+dash_width), width=dash_width, fill=dash_color)
+
+    for i in range(height//(dash+dash_whitespace)+4):
+        dashed_draw.line((0, (i-1)*(dash+dash_whitespace), 0, min(i*dash+(i-1)*dash_whitespace, width)), width=dash_width, fill=dash_color)
+        dashed_draw.line((width+dash_width, (i-1)*(dash+dash_whitespace), width+dash_width, min(i*dash+(i-1)*dash_whitespace, width+dash_width*2)), width=dash_width, fill=dash_color)
+
+    return dashed_card
