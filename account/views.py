@@ -1,16 +1,16 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework import fields, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
 
 from subscription.serializer import SectionSerializer
-from .serializers import UserSerializer
+from .serializers import ChangePasswordSerializer, UserSerializer
 from .models import User
 from subscription.models import Subscription
-
 
 class ValidateQueryParams(serializers.Serializer):
     search = fields.RegexField(
@@ -41,4 +41,18 @@ class UsersViewSet(ModelViewSet):
         user_sections = Subscription.objects.filter(user=user).values_list("year__year", "year__section__name")
         user_section_subs = [f"{u[1]} {u[0]}" for u in user_sections]
         return Response(user_section_subs)
-    
+
+
+class UserViewSet(ViewSet):
+    @action(detail=False, methods=['put'])
+    def changepassword(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        user = self.request.user
+        if serializer.is_valid():
+            print(serializer.validated_data, request.data)
+            if not user.check_password(serializer.validated_data['currentPassword']):
+                raise serializers.ValidationError("Incorrect old password")
+            user.set_password(serializer.validated_data['newPassword'])
+            user.save()
+            return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=400)

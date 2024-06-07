@@ -1,4 +1,4 @@
-import os
+import datetime
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -11,7 +11,7 @@ from rest_framework.decorators import action
 
 from account.models import User
 from sipan.card_generator import generate_card, generate_page
-
+from sipan.excel_report import generate_excel_report
 from .serializer import SectionSubscriptionSerializer, SubscriptionSerializer, SectionSerializer, SectionYearSerializer
 from .models import Subscription, Section, SectionYear
 from sipan.settings import BASE_DIR
@@ -42,6 +42,16 @@ class UserSubsViewSet(mixins.CreateModelMixin,
         pdf_bytes = generate_page(list(request.data['subs']))
         return HttpResponse(pdf_bytes, content_type="application/pdf")
 
+    @action(detail=False, methods=['GET'])
+    def excel_report(self, request):
+        excel_report = generate_excel_report()
+        now = datetime.datetime.now()
+        
+        response = HttpResponse(content_type='application/vnd.ms-excel')
+        response['Content-Disposition'] = f'attachment; filename="subscriptions_till_{now.strftime("%Y_%m_%d")}.xlsx"'
+        response.write(excel_report)
+        return response
+    
     def create(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)

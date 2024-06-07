@@ -1,18 +1,29 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework.response import Response
 
 from .models import User
-from subscription.models import Subscription, Section
+from subscription.models import Subscription
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    currentPassword = serializers.CharField(write_only=True)
+    newPassword = serializers.CharField(write_only=True)
+    confirmPassword = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        password = attrs.get('newPassword')
+        confirm_password = attrs.get('confirmPassword')
+        if password != confirm_password:
+            raise serializers.ValidationError("Passwords don't match")
+        return attrs
+    
 class UserSerializer(serializers.ModelSerializer):
     subs = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
             'id', 'username', 'national_code', 'first_name', 'last_name', 'first_name_fa', 'last_name_fa', 'email', 'address', 'phone', 'home', 'subs', 'image')
-
 
     def get_subs(self, obj):
         user = get_object_or_404(User, pk=obj.pk)
