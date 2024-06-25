@@ -59,8 +59,8 @@ def prepare_profile_image(image_path, box_width, box_height):
     profile_holder.paste(resized_image, ((profile_holder.width - new_width)//2, (profile_holder.height - new_height)//2) )
     return profile_holder
 
-def generate_page(section_ids):
-    if len(section_ids) > 100 or len(section_ids) == 0:
+def generate_page(data):
+    if len(data) > 100 or len(data) == 0:
         return b''
     page_w = cm_to_px(21)
     page_h = cm_to_px(29.7)
@@ -71,9 +71,9 @@ def generate_page(section_ids):
     col_count = (page_w+margin_x-2*margin_x_page) // (width + margin_x)
     row_count = (page_h+margin_y-2*margin_y_page) // (height + margin_y)
     count = col_count * row_count
-    pages_count = ceil(len(section_ids) / count)
+    pages_count = ceil(len(data) / count)
     pages = []
-    card_count = len(section_ids)
+    card_count = len(data)
     for _ in range(pages_count):
         pages.append(Image.new('RGB', (page_w, page_h), (255, 255, 255)))
 
@@ -82,30 +82,27 @@ def generate_page(section_ids):
         row = (n // col_count) % row_count
         page_n = n // count
 
-        sub = Subscription.objects.get(pk=section_ids[n])
-        if sub is not None:
-            card_image = generate_card_image(sub)
-            pages[page_n].paste(card_image, (margin_x_page+col*(width+margin_x), margin_y_page+row*(height+margin_y)))
-        else:
-            print("not found")
+        card_image = generate_card_image(data[n]['user'], data[n]['year'])
+        pages[page_n].paste(card_image, (margin_x_page+col*(width+margin_x), margin_y_page+row*(height+margin_y)))
+
     pdf_bytes = io.BytesIO()
     pages[0].save(pdf_bytes, format='PDF', save_all=True, append_images=pages[1:])
     pdf_bytes.name = "cards.pdf"
     return pdf_bytes.getvalue()
 
-def generate_card(sub):
+def generate_card(user, section_year):
     img_byte_arr = io.BytesIO()
-    image = generate_card_image(sub)
+    image = generate_card_image(user, section_year)
     image.save(img_byte_arr, format='JPEG')
     return img_byte_arr.getvalue()
 
 
-def generate_card_image(sub):
-    if sub.user.image:
-        image_path = sub.user.image.path
+def generate_card_image(user, section_year):
+    if user.image:
+        image_path = user.image.path
     else:
         image_path = ""
-    fullname_am, fullname_fa, section_text, section_color, national_code, user_id = sub.user.full_name, sub.user.first_name_fa + ' ' + sub.user.last_name_fa, f"{sub.year.section.name} {sub.year.year}", sub.year.section.color, sub.user.national_code, sub.user.id
+    fullname_am, fullname_fa, section_text, section_color, national_code, user_id = user.full_name, user.first_name_fa + ' ' + user.last_name_fa, f"{section_year.section.name} {section_year.year}", section_year.section.color, user.national_code, user.id
 
     isWindows = platform.system() == "Windows"
     logo_path = os.path.join(BASE_DIR, 'assets', 'logo.png')

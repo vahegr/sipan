@@ -8,11 +8,9 @@ from django.core.validators import validate_email
 from .managers import UserManager
 
 
-
 def get_file_path(instance, filename):
-    
     ext = filename.split('.')[-1]
-    filename = f"{instance.id}-{instance.national_code}-{uuid.uuid4()}.{ext}"
+    filename = f"{instance.national_code}-{uuid.uuid4()}.{ext}"
     return os.path.join('user-images', filename)
 
 
@@ -42,7 +40,8 @@ class User(AbstractBaseUser):
         max_length=10,
         unique=True,
         blank=True,
-        default=''
+        null=True,
+        default=None
     )
     phone = models.CharField(
         max_length=11,
@@ -61,7 +60,7 @@ class User(AbstractBaseUser):
         default=''
     )
     home = models.CharField(
-        max_length=8,
+        max_length=11,
         blank=True,
         default=''
     )
@@ -69,7 +68,7 @@ class User(AbstractBaseUser):
         default=False,
     )
     is_active = models.BooleanField(
-        default=True,
+        default=False,
     )
     is_staff = models.BooleanField(
         default=False,
@@ -84,7 +83,6 @@ class User(AbstractBaseUser):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
-
     class Meta:
         verbose_name = 'user'
         verbose_name_plural = 'users'
@@ -95,12 +93,14 @@ class User(AbstractBaseUser):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'
+
     @property
     def full_name_fa(self):
         return f'{self.first_name_fa} {self.last_name_fa}'
-    
+
     def has_module_perms(self, app_label):
         return True
+
 
     def __str__(self):
         return f"< {self.id} {self.username} {self.national_code} >"

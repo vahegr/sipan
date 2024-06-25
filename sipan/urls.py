@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from sipan.settings import BASE_DIR, DEBUG, MEDIA_ROOT, MEDIA_URL
+from sipan.settings import DEBUG, MEDIA_ROOT, MEDIA_URL
 
 from account.views import UsersViewSet, UserViewSet
 from sipan.views import CustomTokenObtainPairView
