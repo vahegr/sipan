@@ -6,7 +6,7 @@ from sipan.settings import DEBUG, MEDIA_ROOT, MEDIA_URL
 
 from account.views import UsersViewSet, UserViewSet
 from sipan.views import CustomTokenObtainPairView
-from subscription.views import UserSubsViewSet, SectionViewSet, SectionYearView
+from subscription.views import HistoryViewSet, UserSubsViewSet, SectionViewSet, SectionYearView
 
 
 from rest_framework_simplejwt.views import (
@@ -20,6 +20,7 @@ router.register(r'users', UsersViewSet, basename='users')
 router.register(r'subs', UserSubsViewSet, basename='subs')
 router.register(r'sections', SectionViewSet, basename='sections')
 router.register(r'years', SectionYearView, basename='years')
+router.register(r'history', HistoryViewSet, basename='history')
 
 
 urlpatterns = [

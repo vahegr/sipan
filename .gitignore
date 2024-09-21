@@ -51,3 +51,4 @@ users/images/*
 *.ps1
 .vscode
 test.py
+*.bak

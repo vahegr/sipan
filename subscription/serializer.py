@@ -6,72 +6,6 @@ from .models import History, SectionYear, Subscription, Section
 from account.serializers import UserSerializer
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    national_code = serializers.CharField(required=False, write_only=True)
-
-    class Meta:
-        model = Subscription
-        fields = ('id', 'user', 'year', 'national_code')
-
-    def to_internal_value(self, data):
-        new_data = data.copy()
-        if 'national_code' in data:
-            if len(data['national_code']) == 10:
-                new_data['user'] = get_object_or_404(User, national_code=data['national_code']).id
-            del new_data['national_code']
-
-        if 'section' in data and 'year' in data:
-            section_year = get_object_or_404(SectionYear, section=int(data['section']), year=int(data['year']))
-            del new_data['section']
-            del new_data['year']
-            new_data['year'] = section_year.pk
-
-        return super().to_internal_value(new_data)
-
-
-# class ChangeSectionSerializer(serializers.Serializer):
-#     national_code = serializers.CharField(required=False, write_only=True)
-#     user = serializers.IntegerField(write_only=True)
-#     section = serializers.IntegerField(write_only=True)
-
-#     def to_internal_value(self, data):
-#         new_data = data.copy()
-#         if 'national_code' in data:
-#             if len(data['national_code']) == 10:
-#                 new_data['user'] = get_object_or_404(User, national_code=data['national_code']).id
-#             del new_data['national_code']
-#         if 'section' in data:
-#             section = get_object_or_404(Section, section=int(data['section']))
-#             new_data['section'] = section
-#         return super().to_internal_value(new_data)
-
-
-class SectionSubscriptionSerializerNew(serializers.Serializer):
-    user = serializers.SerializerMethodField()
-    has_paid = serializers.BooleanField()
-    payment = serializers.IntegerField()
-    section = serializers.IntegerField()
-    amount = serializers.IntegerField()
-
-    def get_user(self, obj):
-        return UserSerializer(obj, context={'request': self.context.get('request')}).data
-
-
-class SectionSubscriptionSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), pk_field='user')
-
-    class Meta:
-        model = Subscription
-        fields = ('id', 'year', 'user')
-
-    # def get_user(self, obj):
-    #     return UserSerializer(obj.user, context={'request': self.context.get('request')}).data
-
-
-class SectionYearPay(serializers.Serializer):
-    user = serializers.IntegerField()
-
-
 class UserIDSerializer(serializers.Serializer):
     user = serializers.IntegerField()
 
@@ -94,6 +28,66 @@ class ChangeSectionSerializer(UserIDSerializer):
     date_changed = serializers.DateField(required=False)
 
 
+class UserSectionPaymentSerializer(serializers.Serializer):
+    force = serializers.BooleanField(required=False, write_only=True)
+    amount = serializers.IntegerField()
+    user = serializers.SerializerMethodField()
+
+    def to_internal_value(self, data):
+        internal_data = super().to_internal_value(data)
+        internal_data['user'] = User.objects.get(pk=data['user'])
+        return internal_data
+
+
+class UserPaymentSerializer(serializers.ModelSerializer):
+    force = serializers.BooleanField(required=False, write_only=True)
+
+    class Meta:
+        model = Subscription
+        fields = ('id', 'user', 'date_created', 'amount', 'section_year', 'force')
+        read_only_fields = ('id', )
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret['section_year'] = SectionYearSerializer(SectionYear.objects.get(pk=ret['section_year'])).data
+        return ret
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    national_code = serializers.CharField(required=False, write_only=True)
+
+    class Meta:
+        model = Subscription
+        fields = ('id', 'user', 'section_year', 'national_code', 'date_created', 'amount')
+
+    def to_internal_value(self, data):
+        internal_data = super().to_internal_value(data)
+
+        if 'national_code' in data:
+            if len(data['national_code']) == 10:
+                internal_data['user'] = get_object_or_404(User, national_code=data['national_code']).id
+            del internal_data['national_code']
+
+        if 'section' in data and 'year' in data:
+            section_year = get_object_or_404(SectionYear, section=int(data['section']), year=int(data['year']))
+            del internal_data['section']
+            del internal_data['year']
+            internal_data['year'] = section_year.pk
+
+        return internal_data
+
+
+class SectionMemberSerializer(serializers.Serializer):
+    user = serializers.SerializerMethodField()
+    has_paid = serializers.BooleanField()
+    payment = serializers.IntegerField()
+    section = serializers.IntegerField()
+    amount = serializers.IntegerField()
+
+    def get_user(self, obj):
+        return UserSerializer(obj, context={'request': self.context.get('request')}).data
+
+
 class UserNationalCodeSerializer(serializers.Serializer):
     national_code = serializers.CharField()
 
@@ -109,21 +103,16 @@ class UserNationalCodeSerializer(serializers.Serializer):
         return internal_data
 
 
-class UserPaymentSerializer(UserIDSerializer):
-    amount = serializers.IntegerField()
-    force = serializers.BooleanField(required=False)
-    date_created = serializers.DateField(required=False)
-
-
 class HistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = History
         fields = ('id', 'date_changed', 'user', 'section')
-        read_only_fields = ('date_changed', )
+        read_only_fields = ('id', )
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         ret['section_name'] = instance.section.name
+        ret['section'] = SectionSerializer(instance.section).data
         return ret
 
 
@@ -133,20 +122,44 @@ class SectionSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'color')
 
 
+class SectionChartSerializer(serializers.ModelSerializer):
+    years = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Section
+        fields = ('id', 'name', 'color', 'years')
+
+    def get_years(self, obj):
+        years = SectionYear.objects.filter(section=obj.pk)
+        return {x for x in SectionYearSerializer(years, many=True).data}
+
+
 class SectionYearSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField()
+    payed_count = serializers.SerializerMethodField()
 
     class Meta:
         model = SectionYear
-        fields = ('id', 'section', 'year', 'price', 'count')
+        fields = ('id', 'section', 'year', 'price', 'count', 'payed_count')
 
     def update(self, instance, validated_data):
         validated_data.pop('section', None)
         validated_data.pop('year', None)
         return super().update(instance, validated_data)
 
+    def to_internal_value(self, data):
+        return super().to_internal_value(data)
+
     def get_count(self, obj):
-        return len(obj.get_members())
+        return User.objects.in_section(obj.section.pk, obj.year).count()
+
+    def get_payed_count(self, obj):
+        return User.objects.in_section(obj.section.pk, obj.year, payment=True).filter(has_paid=True).count()
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret['section'] = SectionSerializer(Section.objects.get(pk=ret['section'])).data
+        return ret
 
 
 class BulkPrintSerializer(serializers.Serializer):
@@ -180,8 +193,8 @@ class BulkPrintSerializer(serializers.Serializer):
             except SectionYear.DoesNotExist:
                 raise serializers.ValidationError({'year': 'Invalid year'})
 
-        if not internal_data['year'].get_members().filter(pk=user_id):
-            raise serializers.ValidationError({'user': 'User doesn\'n belong to this section year'})
+        if not User.objects.in_section(section_id, year_obj.year).get(pk=user_id):
+            raise serializers.ValidationError({'user': 'User doesn\'nt belong to this section'})
         return internal_data
 
     def to_representation(self, instance):

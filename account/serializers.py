@@ -1,9 +1,7 @@
 import uuid
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-
 from .models import User
-from subscription.models import History, Subscription
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -19,20 +17,17 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
 
 
-class UserPaymentSerializer(serializers.Serializer):
-    payment_date = serializers.DateField(format="%Y-%m-%d")
-    name = serializers.CharField()
-    amount = serializers.IntegerField()
-
-
 class UserSerializer(serializers.ModelSerializer):
-    subs = serializers.SerializerMethodField()
-    section = serializers.SerializerMethodField()
+    image = serializers.ImageField(max_length=None, allow_empty_file=True, allow_null=True, required=False)
 
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'national_code', 'first_name', 'last_name', 'first_name_fa', 'last_name_fa', 'section', 'email', 'address', 'phone', 'home', 'subs', 'image')
+            'id', 'username', 'national_code', 'first_name',
+            'last_name', 'first_name_fa', 'last_name_fa',
+            'email', 'address', 'phone', 'home', 'image',
+            'date_registered'
+        )
         read_only_fields = ('username', )
 
     def create(self, validated_data):
@@ -43,14 +38,3 @@ class UserSerializer(serializers.ModelSerializer):
         if 'national_code' in validated_data and len(validated_data['national_code']) < 10:
             validated_data['national_code'] = None
         return super().create(validated_data)
-
-    def get_subs(self, obj):
-        user = get_object_or_404(User, pk=obj.pk)
-        user_sections = Subscription.objects.filter(user=user).values_list("year__year", "year__section__name")
-        user_section_subs = [f"{u[1]} {u[0]}" for u in user_sections]
-        return user_section_subs
-
-    def get_section(self, obj):
-        user = get_object_or_404(User, pk=obj.pk)
-        user_sectionhistory = History.objects.filter(user=user).last()
-        return user_sectionhistory.section.name if user_sectionhistory is not None else ""

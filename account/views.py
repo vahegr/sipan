@@ -1,7 +1,7 @@
 from datetime import datetime
-from django.db.models import CharField
+from django.db.models import CharField, IntegerField
 from django.shortcuts import get_object_or_404
-from django.db.models import Q, F
+from django.db.models import Q, F, OuterRef
 from django.db.models.functions import Concat
 from django.db.models import Value
 
@@ -11,11 +11,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 
-from subscription.serializer import HistorySerializer, SectionSerializer
+from subscription.serializer import HistorySerializer, UserPaymentSerializer
+from subscription.models import History, Subscription, SectionYear
 
-from .serializers import ChangePasswordSerializer, UserSerializer, UserPaymentSerializer
+from .serializers import ChangePasswordSerializer, UserSerializer
 from .models import User
-from subscription.models import History, Subscription
+
 
 class ValidateQueryParams(serializers.Serializer):
     search = fields.RegexField(
@@ -25,34 +26,45 @@ class ValidateQueryParams(serializers.Serializer):
 
 
 class UsersViewSet(ModelViewSet):
-    # queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        # query_params = ValidateQueryParams(data=self.request.query_params)
-        # query_params.is_valid(raise_exception=True)
-        query_dict = {k: v for k, v in self.request.query_params.items() if v}
-
         queryset = User.objects.filter(Q(is_superuser=False) | Q(is_staff=False))
 
-        search_val = query_dict.get('search')
+        search_val = self.request.query_params.get('search')
         if search_val:
-            queryset = User.objects.filter(Q(national_code__icontains=search_val) | Q(first_name__icontains=search_val) | Q(last_name__icontains=search_val))
-        return queryset
+            queryset = User.objects.search(search_val)
+        return queryset.order_by('pk')
+
+    @action(detail=False, methods=['get'])
+    def fix_register(self, request):
+        for u in User.objects.all():
+            y = Subscription.objects.filter(user=u).order_by('-section_year__year').values('section_year__year').first()
+            if y:
+                u.date_registered = datetime(y['section_year__year'], 1, 1)
+                u.save()
+        return Response({"status": "done"})
 
     @action(detail=True, methods=['get'])
     def paymenthistory(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        # user_sections = Subscription.objects.filter(user=user).values_list("year__year", "year__section__name", "amount", named=True)
-        user_sections = Subscription.objects.filter(user=user, amount__gt=0).annotate(payment_date=F("date_created"), name=Concat(F("year__section__name"), Value(" "), F("year__year"), output_field=CharField()))
-        serializer = UserPaymentSerializer(user_sections, many=True)
-        return Response(serializer.data)
+        year = request.query_params.get('year')
+        section = request.query_params.get('section')
+        user_sections = Subscription.objects.filter(user=user).order_by('date_created')
+        if year and section:
+            payment_found = get_object_or_404(user_sections, section_year__year=year, section_year__section=section)
+            serializer = UserPaymentSerializer(payment_found)
+            return Response(serializer.data)
+        else:
+            serializer = UserPaymentSerializer(user_sections, many=True)
+            return Response(serializer.data)
 
     @action(detail=True, methods=['post'], serializer_class=HistorySerializer)
     def changesection(self, request, pk):
         user = get_object_or_404(User, pk=pk)
         user_sectionhistory = History.objects.filter(user=user).order_by('-date_changed')
-        serializer = HistorySerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
+
         if serializer.is_valid():
             if user_sectionhistory.last().section != serializer.validated_data['section']:
                 History(section=serializer.validated_data['section'], user=user, date_changed=datetime.now()).save()

@@ -4,6 +4,7 @@ import os
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.validators import validate_email
+from django.utils.timezone import now
 
 from .managers import UserManager
 
@@ -77,6 +78,7 @@ class User(AbstractBaseUser):
         default=False,
     )
     date_created = models.DateTimeField(auto_now_add=True)
+    date_registered = models.DateField(blank=True, null=True)
 
     objects = UserManager()
 
@@ -100,7 +102,6 @@ class User(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return True
-
 
     def __str__(self):
         return f"< {self.id} {self.username} {self.national_code} >"
